@@ -200,9 +200,11 @@ static lgw_context_t lgw_context = {
 /* File handle to write debug logs */
 FILE * log_file = NULL;
 
+#ifdef USE_TEMPERATURE_SENSOR
 /* I2C temperature sensor handles */
 static int     ts_fd = -1;
 static uint8_t ts_addr = 0xFF;
+#endif
 
 /* I2C AD5338 handles */
 static int     ad_fd = -1;
@@ -1080,6 +1082,7 @@ int lgw_start(void) {
     dbg_init_random();
 
     if (CONTEXT_COM_TYPE == LGW_COM_SPI) {
+#ifdef USE_TEMPERATURE_SENSOR
         /* Find the temperature sensor on the known supported ports */
         for (i = 0; i < (int)(sizeof I2C_PORT_TEMP_SENSOR); i++) {
             ts_addr = I2C_PORT_TEMP_SENSOR[i];
@@ -1103,6 +1106,7 @@ int lgw_start(void) {
             printf("ERROR: no temeprature sensor found.\n");
             return LGW_HAL_ERROR;
         }
+#endif
 
         /* Configure ADC AD338R for full duplex (CN490 reference design) */
         if (CONTEXT_BOARD.full_duplex == true) {
@@ -1209,12 +1213,14 @@ int lgw_stop(void) {
     }
 
     if (CONTEXT_COM_TYPE == LGW_COM_SPI) {
+#ifdef USE_TEMPERATURE_SENSOR
         DEBUG_MSG("INFO: Closing I2C for temperature sensor\n");
         x = i2c_linuxdev_close(ts_fd);
         if (x != 0) {
             printf("ERROR: failed to close I2C temperature sensor device (err=%i)\n", x);
             err = LGW_HAL_ERROR;
         }
+#endif
 
         if (CONTEXT_BOARD.full_duplex == true) {
             DEBUG_MSG("INFO: Closing I2C for AD5338R\n");
@@ -1584,7 +1590,12 @@ int lgw_get_temperature(float* temperature) {
 
     switch (CONTEXT_COM_TYPE) {
         case LGW_COM_SPI:
+#ifdef USE_TEMPERATURE_SENSOR
             err = stts751_get_temperature(ts_fd, ts_addr, temperature);
+#else
+	    *temperature = 20.0;
+	    err = 0;
+#endif
             break;
         case LGW_COM_USB:
             err = lgw_com_get_temperature(temperature);
