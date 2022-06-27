@@ -1968,7 +1968,7 @@ void thread_up(void) {
     struct tref local_ref; /* time reference used for UTC <-> timestamp conversion */
 
     /* data buffers */
-    uint8_t buff_up[TX_BUFF_SIZE]; /* buffer to compose the upstream packet */
+    uint8_t *buff_up; /* buffer to compose the upstream packet */
     int buff_index;
     uint8_t buff_ack[32]; /* buffer to receive acknowledges */
 
@@ -1992,6 +1992,12 @@ void thread_up(void) {
     /* mote info variables */
     uint32_t mote_addr = 0;
     uint16_t mote_fcnt = 0;
+
+    buff_up = calloc(TX_BUFF_SIZE, sizeof(uint8_t));
+    if (!buff_up) {
+        MSG("ERROR: [up] buffer allocation failed\n");
+        exit(EXIT_FAILURE);
+    }
 
     /* set upstream socket RX timeout */
     i = setsockopt(sock_up, SOL_SOCKET, SO_RCVTIMEO, (void *)&push_timeout_half, sizeof push_timeout_half);
@@ -2484,6 +2490,9 @@ void thread_up(void) {
         }
         pthread_mutex_unlock(&mx_meas_up);
     }
+
+    free(buff_up);
+
     MSG("\nINFO: End of upstream thread\n");
 }
 
